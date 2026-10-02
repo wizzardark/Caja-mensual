@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F6D4C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Caja del Día">
+<meta name="description" content="Control diario de caja y fiados, funciona sin conexión.">
+<title>Caja del Día</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --paper: #F3F1E7;
+    --paper-line: #DED7C3;
+    --card: #FFFFFF;
+    --ink: #211F1B;
+    --ink-soft: #746C5B;
+    --ink-faint: #A79E89;
+
+    --green: #1F6D4C;
+    --green-dark: #14503A;
+    --green-soft: #E3EFE7;
+
+    --red: #B03A2E;
+    --red-soft: #F5E4E0;
+
+    --blue: #2C8FC0;
+    --blue-soft: #E1EFF5;
+
+    --radius: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display:flex;
+    justify-content:center;
+  }
+
+  .num{ font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Courier New', monospace; font-weight:700; letter-spacing:-0.02em; }
+
+  .app{
+    width:100%;
+    max-width: 460px;
+    min-height:100vh;
+    background: var(--paper);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    padding-bottom: 28px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header.top{
+    padding: 22px 20px 8px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+  }
+  header.top .brand h1{
+    margin:0;
+    font-size: 1.35rem;
+    font-weight:800;
+    letter-spacing:-0.01em;
+  }
+  header.top .brand p{
+    margin: 2px 0 0;
+    font-size: .82rem;
+    color: var(--ink-soft);
+    text-transform: capitalize;
+  }
+  .hist-btns{ display:flex; gap:8px; }
+  .hist-btn{
+    width:38px; height:38px;
+    border-radius:10px;
+    border:1px solid var(--paper-line);
+    background: var(--card);
+    color: var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .hist-btn:active{ transform: scale(0.92); }
+  .hist-btn:disabled{ opacity:.35; cursor:default; }
+  .hist-btn svg{ width:18px; height:18px; }
+
+  /* ---------- HERO (Neto en caja) ---------- */
+  .hero{
+    margin: 10px 20px 0;
+    padding: 22px 20px 18px;
+    border-radius: 18px;
+    background: var(--green);
+    color: #fff;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.07) 0px,
+      rgba(255,255,255,0.07) 1px,
+      transparent 1px,
+      transparent 28px
+    );
+    pointer-events:none;
+  }
+  .hero .label{
+    font-size:.72rem;
+    letter-spacing:.04em;
+    color: rgba(255,255,255,.78);
+    margin:0 0 6px;
+    position:relative;
+  }
+  .hero .value{
+    font-size: 2.35rem;
+    line-height:1.1;
+    margin:0;
+    position:relative;
+    word-break: break-all;
+  }
+  .hero .sub{
+    margin: 8px 0 0;
+    font-size:.76rem;
+    color: rgba(255,255,255,.75);
+    position:relative;
+  }
+
+  /* ---------- STAT ROW ---------- */
+  .stat-row{
+    margin: 12px 20px 0;
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:10px;
+  }
+  .stat-chip{
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align:left;
+  }
+  .stat-chip .label{
+    font-size:.66rem;
+    color: var(--ink-soft);
+    margin:0 0 4px;
+  }
+  .stat-chip .value{
+    font-size: 1.02rem;
+    margin:0;
+  }
+  .stat-chip.total .value{ color: var(--ink); }
+  .stat-chip.gastos .value{ color: var(--red); }
+  .stat-chip.fiado .value{ color: var(--blue); }
+
+  /* ---------- SECTION TITLES ---------- */
+  .section-title{
+    margin: 26px 20px 10px;
+    font-size: .92rem;
+    font-weight:700;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  .section-title span.hint{
+    font-size:.72rem;
+    font-weight:500;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- FORM CARD ---------- */
+  .form-card{
+    margin: 0 20px;
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .seg{
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:8px;
+    margin-bottom: 14px;
+  }
+  .seg input{ position:absolute; opacity:0; pointer-events:none; }
+  .seg label{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding: 10px 4px;
+    border-radius: 10px;
+    border: 1.5px solid var(--paper-line);
+    font-size: .72rem;
+    font-weight:600;
+    color: var(--ink-soft);
+    cursor:pointer;
+    text-align:center;
+    transition: all .15s ease;
+    user-select:none;
+  }
+  .seg label svg{ width:18px; height:18px; }
+
+  .seg input#tipo-efectivo:checked ~ label[for="tipo-efectivo"]{
+    background: var(--green-soft); border-color: var(--green); color: var(--green-dark);
+  }
+  .seg input#tipo-gasto:checked ~ label[for="tipo-gasto"]{
+    background: var(--red-soft); border-color: var(--red); color: var(--red);
+  }
+  .seg input#tipo-fiado:checked ~ label[for="tipo-fiado"]{
+    background: var(--blue-soft); border-color: var(--blue); color: var(--blue);
+  }
+
+  .direccion-wrap[hidden]{ display:none; }
+  .direccion-toggle{
+    display:grid;
+    grid-template-columns: repeat(2,1fr);
+    gap:8px;
+    position:relative;
+  }
+  .direccion-toggle input{ position:absolute; opacity:0; pointer-events:none; }
+  .direccion-toggle label{
+    display:block;
+    text-align:center;
+    padding: 9px 4px;
+    border-radius: 9px;
+    border: 1.5px solid var(--paper-line);
+    background: var(--paper);
+    font-size: .78rem;
+    font-weight:700;
+    color: var(--ink-soft);
+    cursor:pointer;
+    user-select:none;
+    transition: all .15s ease;
+  }
+  .direccion-toggle input#dir-entregado:checked ~ label[for="dir-entregado"]{
+    background: var(--blue); border-color: var(--blue); color: #fff;
+  }
+  .direccion-toggle input#dir-cobrado:checked ~ label[for="dir-cobrado"]{
+    background: var(--green); border-color: var(--green); color: #fff;
+  }
+
+  .field{ margin-bottom: 12px; }
+  .field label{
+    display:block;
+    font-size:.72rem;
+    font-weight:600;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .field label .opt{ font-weight:500; color: var(--ink-faint); }
+  .field label .req{ color: var(--red); }
+
+  .field input[type="number"],
+  .field input[type="text"]{
+    width:100%;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--paper-line);
+    background: var(--paper);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: .95rem;
+    color: var(--ink);
+    outline:none;
+  }
+  .field input[type="number"]{ font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Courier New', monospace; }
+  .field input:focus{ border-color: var(--ink-faint); }
+
+  .amount-prefix{ position:relative; }
+  .amount-prefix::before{
+    content:"$";
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color: var(--ink-faint); font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Courier New', monospace; font-size:.95rem;
+  }
+  .amount-prefix input{ padding-left: 24px !important; }
+
+  .save-btn{
+    width:100%;
+    border:none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: .92rem;
+    font-weight:700;
+    color:#fff;
+    background: var(--green);
+    cursor:pointer;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .save-btn:active{ transform: scale(0.98); }
+  .save-btn.gasto{ background: var(--red); }
+  .save-btn.fiado{ background: var(--blue); }
+  .save-btn.cobro{ background: var(--blue); }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom: 96px;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--ink);
+    color:#fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size:.8rem;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 40;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- BUSCADOR Y FILTROS ---------- */
+  .search-wrap{
+    margin: 0 20px 10px;
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+  .search-wrap svg{
+    position:absolute; left:12px;
+    width:16px; height:16px;
+    color: var(--ink-faint);
+    pointer-events:none;
+  }
+  .search-wrap input{
+    width:100%;
+    padding: 10px 12px 10px 36px;
+    border-radius: 10px;
+    border: 1.5px solid var(--paper-line);
+    background: var(--card);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: .88rem;
+    color: var(--ink);
+    outline:none;
+  }
+  .search-wrap input:focus{ border-color: var(--ink-faint); }
+
+  .chip-row{
+    margin: 0 20px 12px;
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    -ms-overflow-style:none;
+    scrollbar-width:none;
+  }
+  .chip-row::-webkit-scrollbar{ display:none; }
+  .filter-chip{
+    flex-shrink:0;
+    border: 1.5px solid var(--paper-line);
+    background: var(--card);
+    color: var(--ink-soft);
+    font-size:.75rem;
+    font-weight:700;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition: all .12s ease;
+  }
+  .filter-chip.active{
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+  }
+  .filter-chip.active[data-tipo="efectivo"]{ background: var(--green); border-color: var(--green); }
+  .filter-chip.active[data-tipo="gasto"]{ background: var(--red); border-color: var(--red); }
+  .filter-chip.active[data-tipo="fiado"]{ background: var(--blue); border-color: var(--blue); }
+  .filter-chip.active[data-tipo="cobro"]{ background: var(--blue); border-color: var(--blue); }
+
+  /* ---------- LISTS ---------- */
+  .list{ margin: 0 20px; display:flex; flex-direction:column; gap:8px; }
+
+  .move-item{
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .move-item-top{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%; flex-shrink:0;
+  }
+  .dot.efectivo{ background: var(--green); }
+  .dot.gasto{ background: var(--red); }
+  .dot.fiado{ background: var(--blue); }
+  .dot.cobrado{ background: var(--blue); opacity:.5; }
+  .dot.cobro{ background: var(--blue); opacity:.55; }
+
+  .move-info{ flex:1; min-width:0; }
+  .move-info .tipo-line{
+    font-size:.68rem;
+    color: var(--ink-soft);
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .move-info .nota{
+    font-size:.86rem;
+    margin-top:2px;
+    color: var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .move-amount{
+    font-size:.92rem;
+    flex-shrink:0;
+    text-align:right;
+  }
+  .move-amount.efectivo{ color: var(--green); }
+  .move-amount.gasto{ color: var(--red); }
+  .move-amount.fiado{ color: var(--blue); }
+  .move-amount.cobro{ color: var(--blue); }
+
+  .empty{
+    margin: 0 20px;
+    padding: 26px 16px;
+    text-align:center;
+    color: var(--ink-faint);
+    font-size:.84rem;
+    background: var(--card);
+    border: 1px dashed var(--paper-line);
+    border-radius: 12px;
+  }
+
+  .cierre-form{
+    margin: 0 20px;
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display:flex;
+    gap:8px;
+    align-items:flex-end;
+  }
+  .cierre-form .field{ margin-bottom:0; flex:1; }
+  .cierre-form input[type="month"]{
+    width:100%;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1.5px solid var(--paper-line);
+    background: var(--paper);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: .88rem;
+    color: var(--ink);
+    outline:none;
+  }
+  .cierre-btn{
+    flex-shrink:0;
+    border:none;
+    border-radius: 10px;
+    background: var(--ink);
+    color:#fff;
+    font-size:.82rem;
+    font-weight:700;
+    padding: 11px 14px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .cierre-hint{
+    margin: 8px 20px 14px;
+    font-size:.74rem;
+    color: var(--ink-faint);
+    line-height:1.4;
+  }
+
+  .cierre-card{
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .cierre-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom: 10px;
+  }
+  .cierre-head h3{
+    margin:0;
+    font-size:.9rem;
+    font-weight:800;
+    text-transform:capitalize;
+  }
+  .cierre-head .del-btn{
+    background:none;
+    border:none;
+    color: var(--ink-faint);
+    font-size:.68rem;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:2px;
+  }
+  .cierre-grid{
+    display:grid;
+    grid-template-columns: repeat(2,1fr);
+    gap:10px 8px;
+  }
+  .cierre-grid .k{ font-size:.63rem; color: var(--ink-soft); margin:0 0 2px; }
+  .cierre-grid .v{ font-size:.9rem; margin:0; }
+  .cierre-grid .v.efectivo{ color: var(--green); }
+  .cierre-grid .v.gasto{ color: var(--red); }
+  .cierre-grid .v.fiado{ color: var(--blue); }
+  .cierre-grid .v.destacado{ font-size:1.05rem; }
+
+  ::selection{ background: var(--green-soft); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Caja del Día</h1>
+      <p id="fecha-hoy"></p>
+    </div>
+    <div class="hist-btns">
+      <button class="hist-btn" id="btn-undo" title="Deshacer" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      </button>
+      <button class="hist-btn" id="btn-redo" title="Rehacer" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="view-inicio">
+
+    <div class="hero">
+      <p class="label">NETO EN CAJA</p>
+      <p class="value num" id="stat-caja">$0.00</p>
+      <p class="sub" id="stat-caja-sub">Efectivo + cobros de fiado − gastos</p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-chip total">
+        <p class="label">TOTAL</p>
+        <p class="value num" id="stat-total">$0.00</p>
+      </div>
+      <div class="stat-chip gastos">
+        <p class="label">GASTOS</p>
+        <p class="value num" id="stat-gastos">$0.00</p>
+      </div>
+      <div class="stat-chip fiado">
+        <p class="label">FIADO</p>
+        <p class="value num" id="stat-fiado">$0.00</p>
+      </div>
+    </div>
+
+    <div class="section-title">Registrar movimiento</div>
+    <form class="form-card" id="form-movimiento">
+      <div class="seg">
+        <input type="radio" name="tipo" id="tipo-efectivo" value="efectivo" checked>
+        <label for="tipo-efectivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+          Venta efectivo
+        </label>
+
+        <input type="radio" name="tipo" id="tipo-gasto" value="gasto">
+        <label for="tipo-gasto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5 5 19"/><path d="M5 5h6M5 5v6"/><path d="M19 19h-6M19 19v-6"/></svg>
+          Gasto
+        </label>
+
+        <input type="radio" name="tipo" id="tipo-fiado" value="fiado">
+        <label for="tipo-fiado">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Fiado
+        </label>
+      </div>
+
+      <div class="field direccion-wrap" id="direccion-wrap" hidden>
+        <label>¿Entregas o cobras?</label>
+        <div class="direccion-toggle">
+          <input type="radio" name="direccion" id="dir-entregado" value="entregado" checked>
+          <label for="dir-entregado">Entregado</label>
+          <input type="radio" name="direccion" id="dir-cobrado" value="cobrado">
+          <label for="dir-cobrado">Cobrado</label>
+        </div>
+      </div>
+
+      <div class="field amount-prefix">
+        <label for="input-monto">Monto</label>
+        <input type="number" id="input-monto" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" required>
+      </div>
+
+      <div class="field">
+        <label for="input-nota" id="label-nota">Nota / concepto <span class="opt" id="nota-hint">(opcional)</span></label>
+        <input type="text" id="input-nota" maxlength="60" placeholder="Ej: venta del mostrador">
+      </div>
+
+      <button type="submit" class="save-btn" id="btn-guardar">Guardar movimiento</button>
+    </form>
+
+    <div class="section-title">Actividad reciente <span class="hint" id="recent-hint">últimos movimientos</span></div>
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="buscar-actividad" placeholder="Buscar por nombre o nota…" maxlength="60">
+    </div>
+
+    <div class="chip-row" id="filtro-actividad">
+      <button class="filter-chip active" data-tipo="todos">Todos</button>
+      <button class="filter-chip" data-tipo="efectivo">Efectivo</button>
+      <button class="filter-chip" data-tipo="gasto">Gastos</button>
+      <button class="filter-chip" data-tipo="fiado">Fiado</button>
+      <button class="filter-chip" data-tipo="cobro">Cobros</button>
+    </div>
+
+    <div class="list" id="recent-list"></div>
+
+    <div class="section-title">Cierres mensuales <span class="hint">historial por mes</span></div>
+    <div class="cierre-form">
+      <div class="field">
+        <label for="input-mes-cierre">Mes a guardar</label>
+        <input type="month" id="input-mes-cierre">
+      </div>
+      <button type="button" class="cierre-btn" id="btn-guardar-cierre">Guardar cierre</button>
+    </div>
+    <p class="cierre-hint">
+      Ventas, Gastos, Fiado entregado y Cobros son la suma de SOLO lo registrado ese mes.
+      Neto en Caja y Fiado Pendiente, en cambio, son el acumulado real de todo el historial
+      hasta el último día de ese mes — así que puedes cerrar un mes atrasado y va a mostrar
+      el saldo que tenías en ese momento, no el de hoy. No se borra ni se reinicia nada: si
+      alguien paga después, ese pago se suma automáticamente al mes en que ocurre, y el
+      cierre de meses anteriores no cambia.
+    </p>
+    <div class="list" id="cierres-list"></div>
+
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "cajadiaria_datos_v1";
+
+  /* ---------------- estado ---------------- */
+  var data = cargarDatos();
+  var historyStack = [];
+  var redoStack = [];
+
+  function cargarDatos(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.movimientos)){
+          if(!Array.isArray(parsed.cierres)) parsed.cierres = [];
+          return parsed;
+        }
+      }
+    }catch(e){}
+    return { movimientos: [], cierres: [] };
+  }
+
+  function guardarDatos(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function clonar(arr){
+    return JSON.parse(JSON.stringify(arr));
+  }
+
+  function registrarCambio(){
+    historyStack.push(clonar(data.movimientos));
+    if(historyStack.length > 50) historyStack.shift();
+    redoStack = [];
+  }
+
+  function deshacer(){
+    if(historyStack.length === 0) return;
+    redoStack.push(clonar(data.movimientos));
+    data.movimientos = historyStack.pop();
+    guardarDatos();
+    renderTodo();
+    mostrarToast("Acción deshecha");
+  }
+
+  function rehacer(){
+    if(redoStack.length === 0) return;
+    historyStack.push(clonar(data.movimientos));
+    data.movimientos = redoStack.pop();
+    guardarDatos();
+    renderTodo();
+    mostrarToast("Acción rehecha");
+  }
+
+  function nuevoId(){
+    return "m_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8);
+  }
+
+  /* ---------------- cálculos ---------------- */
+  function calcularTotales(){
+    var ventasEfectivo = 0, gastos = 0, fiadoEntregado = 0, cobros = 0;
+    data.movimientos.forEach(function(m){
+      if(m.tipo === "efectivo") ventasEfectivo += m.monto;
+      else if(m.tipo === "gasto") gastos += m.monto;
+      else if(m.tipo === "fiado"){
+        fiadoEntregado += m.monto;
+        if(m.estado === "cobrado") cobros += m.monto; // compatibilidad con marcas antiguas
+      }
+      else if(m.tipo === "cobro") cobros += m.monto;
+    });
+    var fiadoPendiente = Math.max(0, fiadoEntregado - cobros);
+    var netoCaja = ventasEfectivo + cobros - gastos;
+    var total = netoCaja + fiadoPendiente;
+    return { netoCaja: netoCaja, total: total, gastos: gastos, fiadoPendiente: fiadoPendiente };
+  }
+
+  /* ---------------- cierres mensuales ---------------- */
+  // Un cierre es solo una "foto": suma lo que pasó DURANTE ese mes (por fecha del
+  // movimiento), y anota cómo estaban los totales acumulados en ese momento.
+  // No borra ni reinicia movimientos, así que un cobro tardío (ej. fiado de agosto
+  // pagado en diciembre) simplemente se contabiliza en el cierre de diciembre,
+  // sin tocar el cierre de agosto ya guardado.
+
+  function rangoMes(mesKey){
+    var partes = mesKey.split("-");
+    var y = parseInt(partes[0], 10);
+    var m = parseInt(partes[1], 10) - 1;
+    return {
+      inicio: new Date(y, m, 1, 0, 0, 0, 0),
+      fin: new Date(y, m + 1, 1, 0, 0, 0, 0)
+    };
+  }
+
+  function nombreMes(mesKey){
+    var partes = mesKey.split("-");
+    var y = parseInt(partes[0], 10);
+    var m = parseInt(partes[1], 10) - 1;
+    var nombre = new Date(y, m, 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+    return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  }
+
+  function calcularPeriodo(mesKey){
+    var r = rangoMes(mesKey);
+    var ventasEfectivo = 0, gastos = 0, fiadoEntregado = 0, cobros = 0;
+    data.movimientos.forEach(function(m){
+      var f = new Date(m.fecha);
+      if(f >= r.inicio && f < r.fin){
+        if(m.tipo === "efectivo") ventasEfectivo += m.monto;
+        else if(m.tipo === "gasto") gastos += m.monto;
+        else if(m.tipo === "fiado") fiadoEntregado += m.monto;
+        else if(m.tipo === "cobro") cobros += m.monto;
+      }
+    });
+    return { ventasEfectivo: ventasEfectivo, gastos: gastos, fiadoEntregado: fiadoEntregado, cobros: cobros };
+  }
+
+  // Saldo acumulado real tal como estaba justo al terminar ese mes:
+  // suma TODO lo ocurrido desde el inicio de los tiempos hasta esa fecha
+  // límite (sin importar cuándo se presione "Guardar cierre").
+  function calcularAcumuladoHasta(fechaLimite){
+    var ventasEfectivo = 0, gastos = 0, fiadoEntregado = 0, cobros = 0;
+    data.movimientos.forEach(function(m){
+      var f = new Date(m.fecha);
+      if(f >= fechaLimite) return;
+      if(m.tipo === "efectivo") ventasEfectivo += m.monto;
+      else if(m.tipo === "gasto") gastos += m.monto;
+      else if(m.tipo === "fiado"){
+        fiadoEntregado += m.monto;
+        if(m.estado === "cobrado") cobros += m.monto; // compatibilidad con marcas antiguas
+      }
+      else if(m.tipo === "cobro") cobros += m.monto;
+    });
+    var fiadoPendiente = Math.max(0, fiadoEntregado - cobros);
+    var netoCaja = ventasEfectivo + cobros - gastos;
+    return { netoCaja: netoCaja, fiadoPendiente: fiadoPendiente };
+  }
+
+  function guardarCierre(mesKey){
+    var periodo = calcularPeriodo(mesKey);
+    var r = rangoMes(mesKey);
+    var acumuladoAlFinDeMes = calcularAcumuladoHasta(r.fin);
+    var registro = {
+      mes: mesKey,
+      fechaCierre: new Date().toISOString(),
+      ventasEfectivo: periodo.ventasEfectivo,
+      gastos: periodo.gastos,
+      fiadoEntregado: periodo.fiadoEntregado,
+      cobros: periodo.cobros,
+      netoCajaAlCierre: acumuladoAlFinDeMes.netoCaja,
+      fiadoPendienteAlCierre: acumuladoAlFinDeMes.fiadoPendiente
+    };
+    var existente = data.cierres.find(function(c){ return c.mes === mesKey; });
+    if(existente){
+      Object.assign(existente, registro);
+    }else{
+      data.cierres.push(registro);
+    }
+    guardarDatos();
+    renderCierres();
+    mostrarToast("Cierre de " + nombreMes(mesKey) + " guardado");
+  }
+
+  function eliminarCierre(mesKey){
+    data.cierres = data.cierres.filter(function(c){ return c.mes !== mesKey; });
+    guardarDatos();
+    renderCierres();
+    mostrarToast("Cierre eliminado");
+  }
+
+  function renderCierres(){
+    var cont = document.getElementById("cierres-list");
+    var lista = data.cierres.slice().sort(function(a,b){ return b.mes.localeCompare(a.mes); });
+
+    if(lista.length === 0){
+      cont.innerHTML = '<div class="empty">Aún no has guardado ningún cierre mensual.</div>';
+      return;
+    }
+
+    cont.innerHTML = lista.map(function(c){
+      return (
+        '<div class="cierre-card">' +
+          '<div class="cierre-head">' +
+            '<h3>' + nombreMes(c.mes) + '</h3>' +
+            '<button class="del-btn" data-mes="' + c.mes + '">Eliminar</button>' +
+          '</div>' +
+          '<div class="cierre-grid">' +
+            '<div><p class="k">VENTAS EFECTIVO</p><p class="v efectivo num">' + fmt(c.ventasEfectivo) + '</p></div>' +
+            '<div><p class="k">GASTOS</p><p class="v gasto num">' + fmt(c.gastos) + '</p></div>' +
+            '<div><p class="k">FIADO ENTREGADO</p><p class="v fiado num">' + fmt(c.fiadoEntregado) + '</p></div>' +
+            '<div><p class="k">COBROS DE FIADO</p><p class="v fiado num">' + fmt(c.cobros) + '</p></div>' +
+            '<div><p class="k">NETO EN CAJA (al cierre)</p><p class="v efectivo destacado num">' + fmt(c.netoCajaAlCierre) + '</p></div>' +
+            '<div><p class="k">FIADO PENDIENTE (al cierre)</p><p class="v fiado destacado num">' + fmt(c.fiadoPendienteAlCierre) + '</p></div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function fmt(n){
+    var v = Math.round((n + Number.EPSILON) * 100) / 100;
+    return "$" + v.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtFecha(iso){
+    var d = new Date(iso);
+    var hoy = new Date();
+    var esHoy = d.toDateString() === hoy.toDateString();
+    var hora = d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    if(esHoy) return "Hoy · " + hora;
+    var dia = d.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit" });
+    return dia + " · " + hora;
+  }
+
+  /* ---------------- render ---------------- */
+  function renderTodo(){
+    renderStats();
+    renderRecientes();
+    renderCierres();
+    renderBotonesHistoria();
+  }
+
+  function renderStats(){
+    var t = calcularTotales();
+    document.getElementById("stat-caja").textContent = fmt(t.netoCaja);
+    document.getElementById("stat-total").textContent = fmt(t.total);
+    document.getElementById("stat-gastos").textContent = fmt(t.gastos);
+    document.getElementById("stat-fiado").textContent = fmt(t.fiadoPendiente);
+  }
+
+  var ETIQUETAS = {
+    efectivo: "Venta efectivo",
+    gasto: "Gasto",
+    fiado_pendiente: "Fiado entregado",
+    fiado_cobrado: "Fiado cobrado",
+    cobro: "Cobro de fiado"
+  };
+
+  var filtroActividad = "todos";
+  var busquedaActividad = "";
+
+  function normalizar(str){
+    return (str || "").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function renderRecientes(){
+    var cont = document.getElementById("recent-list");
+    var hayFiltro = filtroActividad !== "todos" || busquedaActividad !== "";
+
+    var lista = data.movimientos.slice();
+
+    if(filtroActividad !== "todos"){
+      lista = lista.filter(function(m){ return m.tipo === filtroActividad; });
+    }
+    if(busquedaActividad !== ""){
+      var q = normalizar(busquedaActividad);
+      lista = lista.filter(function(m){ return normalizar(m.nota).indexOf(q) !== -1; });
+    }
+
+    lista.sort(function(a,b){
+      return new Date(b.ultimaFecha || b.fecha) - new Date(a.ultimaFecha || a.fecha);
+    });
+    if(!hayFiltro) lista = lista.slice(0, 8);
+
+    document.getElementById("recent-hint").textContent = hayFiltro
+      ? (lista.length + (lista.length === 1 ? " resultado" : " resultados"))
+      : "últimos movimientos";
+
+    if(lista.length === 0){
+      cont.innerHTML = '<div class="empty">' +
+        (hayFiltro ? "No hay movimientos que coincidan." : "Aún no hay movimientos. Registra el primero arriba.") +
+        '</div>';
+      return;
+    }
+
+    cont.innerHTML = lista.map(function(m){
+      var dotClass = m.tipo === "fiado" && m.estado === "cobrado" ? "cobrado" : m.tipo;
+      var etiqueta;
+      var signoClase = m.tipo;
+      if(m.tipo === "fiado" && m.estado === "cobrado"){ etiqueta = ETIQUETAS.fiado_cobrado; }
+      else if(m.tipo === "fiado"){ etiqueta = ETIQUETAS.fiado_pendiente; }
+      else{ etiqueta = ETIQUETAS[m.tipo]; }
+      var fechaMostrar = m.tipo === "fiado" && m.estado === "cobrado" ? m.fechaCobro : m.fecha;
+      var signo = m.tipo === "gasto" ? "−" : "+";
+      return (
+        '<div class="move-item">' +
+          '<div class="move-item-top">' +
+            '<span class="dot ' + dotClass + '"></span>' +
+            '<div class="move-info">' +
+              '<div class="tipo-line">' + etiqueta + ' · ' + fmtFecha(fechaMostrar) + '</div>' +
+              '<div class="nota">' + (escapeHtml(m.nota) || "Sin concepto") + '</div>' +
+            '</div>' +
+            '<div class="move-amount ' + signoClase + '">' + signo + fmt(m.monto) + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function renderBotonesHistoria(){
+    document.getElementById("btn-undo").disabled = historyStack.length === 0;
+    document.getElementById("btn-redo").disabled = redoStack.length === 0;
+  }
+
+  function escapeHtml(str){
+    if(!str) return "";
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  var toastTimer = null;
+  function mostrarToast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  /* ---------------- formulario ---------------- */
+  var form = document.getElementById("form-movimiento");
+  var inputMonto = document.getElementById("input-monto");
+  var inputNota = document.getElementById("input-nota");
+  var labelNotaHint = document.getElementById("nota-hint");
+  var btnGuardar = document.getElementById("btn-guardar");
+  var radiosTipo = document.querySelectorAll('input[name="tipo"]');
+  var radiosDireccion = document.querySelectorAll('input[name="direccion"]');
+  var direccionWrap = document.getElementById("direccion-wrap");
+
+  function tipoActual(){
+    var checked = document.querySelector('input[name="tipo"]:checked');
+    return checked ? checked.value : "efectivo";
+  }
+
+  function direccionActual(){
+    var checked = document.querySelector('input[name="direccion"]:checked');
+    return checked ? checked.value : "entregado";
+  }
+
+  // Tipo real que se guarda: un fiado "cobrado" se registra internamente como "cobro"
+  function tipoParaGuardar(){
+    var tipo = tipoActual();
+    if(tipo === "fiado" && direccionActual() === "cobrado") return "cobro";
+    return tipo;
+  }
+
+  function actualizarFormularioPorTipo(){
+    var tipo = tipoActual();
+    direccionWrap.hidden = tipo !== "fiado";
+
+    var tipoReal = tipoParaGuardar();
+    btnGuardar.classList.remove("gasto", "fiado", "cobro");
+    if(tipoReal === "gasto"){
+      btnGuardar.classList.add("gasto");
+      btnGuardar.textContent = "Guardar gasto";
+      inputNota.required = true;
+      labelNotaHint.textContent = "(obligatoria)";
+      labelNotaHint.classList.add("req");
+      inputNota.placeholder = "Ej: pago de proveedor";
+    }else if(tipoReal === "fiado"){
+      btnGuardar.classList.add("fiado");
+      btnGuardar.textContent = "Guardar fiado entregado";
+      inputNota.required = false;
+      labelNotaHint.textContent = "(opcional)";
+      labelNotaHint.classList.remove("req");
+      inputNota.placeholder = "Ej: Juan Pérez";
+    }else if(tipoReal === "cobro"){
+      btnGuardar.classList.add("cobro");
+      btnGuardar.textContent = "Registrar cobro de fiado";
+      inputNota.required = false;
+      labelNotaHint.textContent = "(opcional)";
+      labelNotaHint.classList.remove("req");
+      inputNota.placeholder = "Ej: abono de Juan Pérez";
+    }else{
+      btnGuardar.textContent = "Guardar movimiento";
+      inputNota.required = false;
+      labelNotaHint.textContent = "(opcional)";
+      labelNotaHint.classList.remove("req");
+      inputNota.placeholder = "Ej: venta del mostrador";
+    }
+  }
+  radiosTipo.forEach(function(r){ r.addEventListener("change", actualizarFormularioPorTipo); });
+  radiosDireccion.forEach(function(r){ r.addEventListener("change", actualizarFormularioPorTipo); });
+  actualizarFormularioPorTipo();
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var tipo = tipoParaGuardar();
+    var monto = parseFloat(inputMonto.value);
+    var nota = inputNota.value.trim();
+
+    if(!monto || monto <= 0){
+      mostrarToast("Ingresa un monto válido");
+      inputMonto.focus();
+      return;
+    }
+    if(tipo === "gasto" && nota === ""){
+      mostrarToast("El gasto necesita una nota");
+      inputNota.focus();
+      return;
+    }
+    if(tipo === "cobro"){
+      var pendienteActual = calcularTotales().fiadoPendiente;
+      if(monto > pendienteActual + 0.005){
+        mostrarToast("Ese cobro supera el fiado pendiente (" + fmt(pendienteActual) + ")");
+        inputMonto.focus();
+        return;
+      }
+    }
+
+    registrarCambio();
+
+    var mov = {
+      id: nuevoId(),
+      tipo: tipo,
+      monto: monto,
+      nota: nota,
+      fecha: new Date().toISOString()
+    };
+
+    data.movimientos.push(mov);
+    guardarDatos();
+    renderTodo();
+
+    var msg = tipo === "efectivo" ? "Venta registrada"
+      : tipo === "gasto" ? "Gasto registrado"
+      : tipo === "cobro" ? "Cobro registrado · sumado a caja"
+      : "Fiado registrado";
+    mostrarToast(msg);
+
+    form.reset();
+    document.getElementById("tipo-efectivo").checked = true;
+    actualizarFormularioPorTipo();
+    inputMonto.focus();
+  });
+
+  /* ---------------- filtros y búsqueda ---------------- */
+  document.getElementById("filtro-actividad").addEventListener("click", function(e){
+    var chip = e.target.closest(".filter-chip");
+    if(!chip) return;
+    document.querySelectorAll("#filtro-actividad .filter-chip").forEach(function(c){ c.classList.remove("active"); });
+    chip.classList.add("active");
+    filtroActividad = chip.getAttribute("data-tipo");
+    renderRecientes();
+  });
+
+  document.getElementById("buscar-actividad").addEventListener("input", function(e){
+    busquedaActividad = e.target.value;
+    renderRecientes();
+  });
+
+  /* ---------------- undo / redo ---------------- */
+  document.getElementById("btn-undo").addEventListener("click", deshacer);
+  document.getElementById("btn-redo").addEventListener("click", rehacer);
+
+  /* ---------------- cierres mensuales ---------------- */
+  var inputMesCierre = document.getElementById("input-mes-cierre");
+  (function(){
+    var hoy = new Date();
+    inputMesCierre.value = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+  })();
+
+  document.getElementById("btn-guardar-cierre").addEventListener("click", function(){
+    var mesKey = inputMesCierre.value;
+    if(!mesKey){
+      mostrarToast("Elige un mes primero");
+      return;
+    }
+    var yaExiste = data.cierres.some(function(c){ return c.mes === mesKey; });
+    if(yaExiste){
+      if(!confirm("Ya guardaste un cierre para " + nombreMes(mesKey) + ". ¿Quieres reemplazarlo con los números actuales?")) return;
+    }
+    guardarCierre(mesKey);
+  });
+
+  document.getElementById("cierres-list").addEventListener("click", function(e){
+    var btn = e.target.closest(".del-btn");
+    if(!btn) return;
+    var mesKey = btn.getAttribute("data-mes");
+    if(confirm("¿Eliminar el cierre de " + nombreMes(mesKey) + "?")) eliminarCierre(mesKey);
+  });
+
+  /* ---------------- fecha encabezado ---------------- */
+  document.getElementById("fecha-hoy").textContent = new Date().toLocaleDateString("es-CO", {
+    weekday: "long", day: "numeric", month: "long"
+  });
+
+  /* ---------------- inicio ---------------- */
+  renderTodo();
+
+  /* ---------------- service worker (offline) ---------------- */
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(err){
+        console.warn("No se pudo registrar el service worker:", err);
+      });
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
